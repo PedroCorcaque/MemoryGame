@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2e1065">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Penguins &amp; Owls Memory</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%90%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --bg1:#1b0a38; --bg2:#3b1480; --bg3:#6d28d9;
+  --card:#ede9fe; --accent:#c084fc; --accent2:#a78bfa; --text:#f5f3ff; --muted:#c4b5fd;
+  --gold:#fbbf24;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{
+  font-family: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 20% 10%, rgba(192,132,252,.35), transparent 45%),
+    radial-gradient(circle at 85% 90%, rgba(124,58,237,.45), transparent 50%),
+    linear-gradient(160deg,var(--bg1),var(--bg2) 60%,var(--bg3));
+  background-attachment:fixed;
+  touch-action:manipulation;
+  overflow-x:hidden;
+}
+/* twinkling stars */
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0}
+.stars i{position:absolute;color:#ddd6fe;opacity:.5;font-style:normal;animation:tw 3s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:.8;transform:scale(1.15)}}
+.app{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) 14px max(18px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px}
+header{text-align:center}
+h1{margin:6px 0 0;font-size:clamp(1.6rem,7vw,2.2rem);letter-spacing:.5px;text-shadow:0 3px 18px rgba(192,132,252,.6)}
+h1 span{color:var(--accent)}
+.sub{margin:2px 0 0;color:var(--muted);font-size:.95rem}
+.levels{display:flex;gap:8px;justify-content:center}
+.levels button,.actions button,.modal button{
+  font:inherit;font-weight:700;border:0;border-radius:999px;padding:9px 16px;cursor:pointer;color:var(--text);
+  background:rgba(255,255,255,.12);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18);
+  transition:transform .12s, background .2s;
+}
+.levels button:active,.actions button:active,.modal button:active{transform:scale(.95)}
+.levels button.on{background:linear-gradient(135deg,#a855f7,#7c3aed);border-color:transparent;box-shadow:0 4px 16px rgba(124,58,237,.55)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:8px 6px;text-align:center}
+.stat b{display:block;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.stat small{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.8px}
+.board{display:grid;grid-template-columns:repeat(var(--cols,4),1fr);gap:10px;width:100%}
+.card{perspective:700px;border:0;background:none;padding:0;aspect-ratio:1;cursor:pointer;font:inherit}
+.inner{position:relative;display:block;width:100%;height:100%;transition:transform .45s cubic-bezier(.3,.8,.3,1.2);transform-style:preserve-3d}
+.card.flipped .inner,.card.matched .inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;display:grid;place-items:center;border-radius:18px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
+.front{
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), transparent 40%),
+    linear-gradient(145deg,#a855f7,#6d28d9);
+  border:2px solid rgba(255,255,255,.35);
+  box-shadow:0 6px 14px rgba(20,5,50,.45), inset 0 -4px 10px rgba(0,0,0,.18);
+  font-size:clamp(1.4rem,8vw,2.2rem);color:rgba(255,255,255,.85);
+}
+.back{
+  transform:rotateY(180deg);
+  background:linear-gradient(160deg,#f5f3ff,#ddd6fe);
+  border:2px solid #c4b5fd;
+  box-shadow:0 6px 14px rgba(20,5,50,.4);
+}
+.back svg{width:88%;height:88%}
+.card.matched .back{background:linear-gradient(160deg,#fdf4ff,#e9d5ff);border-color:var(--gold);box-shadow:0 0 0 3px rgba(251,191,36,.45),0 6px 16px rgba(251,191,36,.35)}
+.card.matched .inner{animation:pop .5s ease}
+@keyframes pop{0%{transform:rotateY(180deg) scale(1)}50%{transform:rotateY(180deg) scale(1.12)}100%{transform:rotateY(180deg) scale(1)}}
+.card:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:18px}
+.actions{display:flex;gap:8px;justify-content:center}
+footer{text-align:center;color:var(--muted);font-size:.8rem;opacity:.8}
+/* modal */
+.modal{position:fixed;inset:0;z-index:5;display:grid;place-items:center;background:rgba(20,5,50,.6);backdrop-filter:blur(4px);padding:20px}
+.modal[hidden]{display:none}
+.sheet{width:min(360px,100%);text-align:center;padding:24px 20px;border-radius:28px;background:linear-gradient(160deg,#4c1d95,#2e1065);border:1px solid rgba(255,255,255,.25);box-shadow:0 20px 60px rgba(0,0,0,.5);animation:rise .4s ease}
+@keyframes rise{from{transform:translateY(30px) scale(.95);opacity:0}to{transform:none;opacity:1}}
+.sheet h2{margin:4px 0 6px;font-size:1.6rem}
+.sheet .big{font-size:3rem;margin:0}
+.sheet .stars-r{font-size:2rem;letter-spacing:6px;color:var(--gold);margin:6px 0}
+.sheet p{margin:6px 0;color:var(--muted)}
+.sheet .row{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.sheet .primary{background:linear-gradient(135deg,#a855f7,#7c3aed);border-color:transparent}
+/* confetti */
+.confetti{position:fixed;top:-40px;z-index:6;pointer-events:none;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.9}}
+@media (prefers-reduced-motion:reduce){
+  .inner{transition:none}.stars i,.card.matched .inner,.sheet{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="stars" id="stars" aria-hidden="true"></div>
+
+<main class="app">
+  <header>
+    <h1>Penguins <span>&amp;</span> Owls</h1>
+    <p class="sub">Find all the matching pairs 💜</p>
+  </header>
+
+  <div class="levels" id="levels" role="group" aria-label="Difficulty">
+    <button data-level="easy" class="on">Easy</button>
+    <button data-level="medium">Medium</button>
+    <button data-level="hard">Hard</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="moves">0</b><small>Moves</small></div>
+    <div class="stat"><b id="time">0:00</b><small>Time</small></div>
+    <div class="stat"><b id="best">–</b><small>Best</small></div>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="actions">
+    <button id="restart">↻ New game</button>
+    <button id="mute" aria-label="Toggle sound">🔊</button>
+  </div>
+  <footer>Tip: Owls watch, penguins waddle. Both remember.</footer>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <p class="big" id="winEmoji">🦉🐧</p>
+    <h2 id="winTitle">You did it!</h2>
+    <div class="stars-r" id="winStars">★★★</div>
+    <p id="winMsg"></p>
+    <div class="row">
+      <button class="primary" id="again">Play again</button>
+      <button id="next">Next level →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ✏️ Put her name here for a personal touch in the victory message
+const HER_NAME = "Amorzinho";
+
+const DEFS = [
+  {a:'penguin', acc:'scarf',   c:'#3b0764', k:'#f472b6'},
+  {a:'owl',     acc:'glasses', c:'#7c3aed'},
+  {a:'penguin', acc:'hat',     c:'#4c1d95', k:'#fbbf24'},
+  {a:'owl',     acc:'crown',   c:'#a78bfa'},
+  {a:'penguin', acc:'bow',     c:'#581c87', k:'#fb7185'},
+  {a:'owl',     acc:'flower',  c:'#8b5cf6', k:'#f9a8d4'},
+  {a:'penguin', acc:'crown',   c:'#1e1b4b'},
+  {a:'owl',     acc:'scarf',   c:'#6d28d9', k:'#fbbf24'},
+  {a:'penguin', acc:'glasses', c:'#312e81'},
+  {a:'owl',     acc:'heart',   c:'#c084fc'}
+];
+const LEVELS = { easy:{pairs:6,cols:3}, medium:{pairs:8,cols:4}, hard:{pairs:10,cols:4} };
+
+/* ---------- Art ---------- */
+function art(d){
+  const P = d.a === 'penguin', c = d.c, k = d.k || '#fbbf24';
+  let s = '<svg viewBox="0 0 100 100" aria-hidden="true">';
+  s += '<ellipse cx="50" cy="94" rx="26" ry="4" fill="#4c1d95" opacity=".15"/>';
+  let E, gr, sy;
+  if (P){
+    E = [[41,38],[59,38]]; gr = 8; sy = 54;
+    s += `<ellipse cx="21" cy="62" rx="6" ry="16" fill="${c}" transform="rotate(18 21 62)"/>`;
+    s += `<ellipse cx="79" cy="62" rx="6" ry="16" fill="${c}" transform="rotate(-18 79 62)"/>`;
+    s += '<ellipse cx="38" cy="91" rx="10" ry="4.5" fill="#fb923c"/><ellipse cx="62" cy="91" rx="10" ry="4.5" fill="#fb923c"/>';
+    s += `<ellipse cx="50" cy="56" rx="28" ry="36" fill="${c}"/>`;
+    s += '<ellipse cx="50" cy="66" rx="18" ry="24" fill="#faf5ff"/>';
+    s += '<ellipse cx="50" cy="40" rx="19" ry="15" fill="#faf5ff"/>';
+    E.forEach(([x,y]) => { s += `<circle cx="${x}" cy="${y}" r="3.8" fill="#1e1b4b"/><circle cx="${x+1.2}" cy="${y-1.3}" r="1.3" fill="#fff"/>`; });
+    s += '<path d="M45 44 Q50 41 55 44 L50 52Z" fill="#fb923c"/>';
+    s += '<circle cx="34" cy="46" r="3.5" fill="#f9a8d4" opacity=".8"/><circle cx="66" cy="46" r="3.5" fill="#f9a8d4" opacity=".8"/>';
+  } else {
+    E = [[37,42],[63,42]]; gr = 12.5; sy = 60;
+    s += `<ellipse cx="20" cy="60" rx="8" ry="21" fill="${c}" transform="rotate(8 20 60)"/><ellipse cx="20" cy="60" rx="8" ry="21" fill="#1e1b4b" opacity=".2" transform="rotate(8 20 60)"/>`;
+    s += `<ellipse cx="80" cy="60" rx="8" ry="21" fill="${c}" transform="rotate(-8 80 60)"/><ellipse cx="80" cy="60" rx="8" ry="21" fill="#1e1b4b" opacity=".2" transform="rotate(-8 80 60)"/>`;
+    s += '<ellipse cx="40" cy="92" rx="8" ry="3.5" fill="#fb923c"/><ellipse cx="60" cy="92" rx="8" ry="3.5" fill="#fb923c"/>';
+    s += `<path d="M24 34 L27 10 L44 24Z" fill="${c}"/><path d="M76 34 L73 10 L56 24Z" fill="${c}"/>`;
+    s += `<ellipse cx="50" cy="56" rx="30" ry="36" fill="${c}"/>`;
+    s += '<ellipse cx="50" cy="70" rx="19" ry="21" fill="#ede9fe"/>';
+    s += `<path d="M42 64q4 4 8 0q4 4 8 0M40 74q5 4 10 0q5 4 10 0M43 84q3.5 3 7 0q3.5 3 7 0" stroke="${c}" fill="none" stroke-width="2" stroke-linecap="round" opacity=".6"/>`;
+    s += '<circle cx="37" cy="42" r="13" fill="#f5f3ff"/><circle cx="63" cy="42" r="13" fill="#f5f3ff"/>';
+    E.forEach(([x,y]) => { s += `<circle cx="${x}" cy="${y}" r="7.5" fill="#fbbf24"/><circle cx="${x}" cy="${y}" r="4.3" fill="#1e1b4b"/><circle cx="${x+1.5}" cy="${y-1.6}" r="1.5" fill="#fff"/>`; });
+    s += '<path d="M50 47 L46 53 L50 59 L54 53Z" fill="#fb923c"/>';
+  }
+  switch (d.acc){
+    case 'glasses':
+      s += `<path d="M${E[0][0]+gr} ${E[0][1]} L${E[1][0]-gr} ${E[1][1]}" stroke="#1e1b4b" stroke-width="2.5"/>`;
+      E.forEach(([x,y]) => { s += `<circle cx="${x}" cy="${y}" r="${gr}" fill="#fff" fill-opacity=".22" stroke="#1e1b4b" stroke-width="2.5"/>`; });
+      break;
+    case 'scarf':
+      s += `<rect x="23" y="${sy}" width="54" height="10" rx="5" fill="${k}"/>`;
+      s += `<rect x="58" y="${sy+4}" width="10" height="22" rx="4.5" fill="${k}"/>`;
+      s += `<path d="M30 ${sy+2}v6M40 ${sy+2}v6M50 ${sy+2}v6" stroke="#fff" stroke-opacity=".45" stroke-width="2" stroke-linecap="round"/>`;
+      break;
+    case 'bow':
+      s += `<path d="M50 ${sy+4}L35 ${sy-4}L35 ${sy+12}Z M50 ${sy+4}L65 ${sy-4}L65 ${sy+12}Z" fill="${k}"/><circle cx="50" cy="${sy+4}" r="4.5" fill="${k}" stroke="#fff" stroke-opacity=".6" stroke-width="1.5"/>`;
+      break;
+    case 'hat':
+      s += `<path d="M38 26 L50 2 L62 26Z" fill="${k}" stroke="#fff" stroke-opacity=".6" stroke-width="1.5" stroke-linejoin="round"/><circle cx="50" cy="3" r="4" fill="#f472b6"/>`;
+      s += '<path d="M42 18 L58 18M45 11 L55 11" stroke="#fff" stroke-opacity=".7" stroke-width="2.5" stroke-linecap="round"/>';
+      break;
+    case 'crown':
+      s += '<path d="M37 27 L37 11 L44 19 L50 7 L56 19 L63 11 L63 27Z" fill="#fbbf24" stroke="#f59e0b" stroke-width="2" stroke-linejoin="round"/><circle cx="50" cy="20" r="2.4" fill="#f472b6"/>';
+      break;
+    case 'flower': {
+      const fx = 68, fy = 26;
+      for (let i = 0; i < 5; i++){
+        const ang = i * 72 * Math.PI / 180;
+        s += `<circle cx="${(fx + Math.cos(ang) * 6).toFixed(1)}" cy="${(fy + Math.sin(ang) * 6).toFixed(1)}" r="4.6" fill="${k}"/>`;
+      }
+      s += `<circle cx="${fx}" cy="${fy}" r="3.4" fill="#fbbf24"/>`;
+      break; }
+    case 'heart':
+      s += '<path d="M50 88c-9-7-14-11-14-16a7 7 0 0 1 14-2a7 7 0 0 1 14 2c0 5-5 9-14 16z" fill="#f472b6" stroke="#fff" stroke-opacity=".6" stroke-width="1.2"/>';
+      break;
+  }
+  return s + '</svg>';
+}
+
+/* ---------- Sound ---------- */
+let actx = null, muted = false;
+function beep(f, dur = .12, type = 'sine', vol = .06, when = 0){
+  if (muted) return;
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime + when, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur);
+  }catch(e){}
+}
+const sFlip  = () => beep(520, .08, 'triangle');
+const sMatch = () => { beep(660,.14,'sine',.07); beep(880,.2,'sine',.07,.1); };
+const sMiss  = () => beep(220, .15, 'sine', .05);
+const sWin   = () => [523,659,784,1047].forEach((f,i) => beep(f,.25,'triangle',.07,i*.13));
+
+/* ---------- Game ---------- */
+const $ = id => document.getElementById(id);
+const board = $('board');
+let level = 'easy', first = null, lock = true, moves = 0, found = 0, seconds = 0, timer = null, started = false, gen = 0;
+
+const fmt = s => Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+const bestKey = () => 'pm-best-' + level;
+function loadBest(){ try{ return JSON.parse(localStorage.getItem(bestKey())); }catch(e){ return null; } }
+function saveBest(b){ try{ localStorage.setItem(bestKey(), JSON.stringify(b)); }catch(e){} }
+function showBest(){ const b = loadBest(); $('best').textContent = b ? b.moves + ' mv' : '–'; }
+
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function newGame(){
+  const myGen = ++gen;
+  clearInterval(timer); timer = null;
+  first = null; moves = 0; found = 0; seconds = 0; started = false; lock = true;
+  $('moves').textContent = '0'; $('time').textContent = '0:00'; showBest();
+  const L = LEVELS[level];
+  const defs = DEFS.slice(0, L.pairs);
+  const deck = shuffle([...defs, ...defs].map(d => ({ d, pair: DEFS.indexOf(d) })));
+  board.style.setProperty('--cols', L.cols);
+  board.innerHTML = '';
+  deck.forEach(({ d, pair }) => {
+    const b = document.createElement('button');
+    b.className = 'card'; b.dataset.pair = pair;
+    b.setAttribute('aria-label', 'Hidden card');
+    b.innerHTML = '<span class="inner"><span class="face front">🐾</span><span class="face back">' + art(d) + '</span></span>';
+    b.addEventListener('click', () => flip(b));
+    board.appendChild(b);
+  });
+  // quick peek so she can glimpse the board
+  const cards = [...board.children];
+  setTimeout(() => { if (gen === myGen) cards.forEach(c => c.classList.add('flipped')); }, 350);
+  setTimeout(() => { if (gen === myGen){ cards.forEach(c => c.classList.remove('flipped')); lock = false; } }, 350 + 1100 + L.pairs * 120);
+}
+
+function flip(card){
+  if (lock || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+  if (!started){ started = true; timer = setInterval(() => { seconds++; $('time').textContent = fmt(seconds); }, 1000); }
+  card.classList.add('flipped'); sFlip();
+  if (!first){ first = card; return; }
+  const a = first, b = card; first = null; moves++; $('moves').textContent = moves;
+  if (a.dataset.pair === b.dataset.pair){
+    setTimeout(() => {
+      a.classList.replace('flipped','matched'); b.classList.replace('flipped','matched');
+      a.setAttribute('aria-label','Matched'); b.setAttribute('aria-label','Matched');
+      found++; sMatch(); if (navigator.vibrate) try{ navigator.vibrate(40); }catch(e){}
+      if (found === LEVELS[level].pairs) win();
+    }, 350);
+  } else {
+    lock = true;
+    setTimeout(() => { sMiss(); a.classList.remove('flipped'); b.classList.remove('flipped'); lock = false; }, 850);
+  }
+}
+
+function win(){
+  clearInterval(timer); timer = null;
+  const pairs = LEVELS[level].pairs;
+  const stars = moves <= pairs * 1.5 ? 3 : moves <= pairs * 2.3 ? 2 : 1;
+  const prev = loadBest();
+  const isBest = !prev || moves < prev.moves || (moves === prev.moves && seconds < prev.time);
+  if (isBest) saveBest({ moves, time: seconds });
+  showBest();
+  const who = HER_NAME ? ', ' + HER_NAME : '';
+  $('winTitle').textContent = isBest ? 'New record' + who + '! 🎉' : 'You did it' + who + '! 🎉';
+  $('winStars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+  $('winMsg').textContent = moves + ' moves in ' + fmt(seconds) + (isBest ? ' — your best so far!' : '');
+  $('next').style.display = level === 'hard' ? 'none' : '';
+  setTimeout(() => { $('modal').hidden = false; sWin(); confetti(); $('again').focus(); }, 450);
+}
+
+function confetti(){
+  const bits = ['🐧','🦉','💜','✨','⭐','🟣'];
+  for (let i = 0; i < 36; i++){
+    const e = document.createElement('span');
+    e.className = 'confetti'; e.textContent = bits[i % bits.length];
+    e.style.left = Math.random() * 100 + 'vw';
+    e.style.fontSize = 16 + Math.random() * 20 + 'px';
+    e.style.animationDuration = 2.2 + Math.random() * 2 + 's';
+    e.style.animationDelay = Math.random() * .6 + 's';
+    document.body.appendChild(e);
+    setTimeout(() => e.remove(), 5500);
+  }
+}
+
+function setLevel(l){
+  level = l;
+  document.querySelectorAll('#levels button').forEach(b => b.classList.toggle('on', b.dataset.level === l));
+  newGame();
+}
+
+$('levels').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setLevel(b.dataset.level); });
+$('restart').addEventListener('click', newGame);
+$('again').addEventListener('click', () => { $('modal').hidden = true; newGame(); });
+$('next').addEventListener('click', () => { $('modal').hidden = true; setLevel(level === 'easy' ? 'medium' : 'hard'); });
+$('mute').addEventListener('click', () => { muted = !muted; $('mute').textContent = muted ? '🔇' : '🔊'; });
+
+// background stars
+(() => {
+  const box = $('stars');
+  for (let i = 0; i < 26; i++){
+    const s = document.createElement('i');
+    s.textContent = Math.random() > .5 ? '✦' : '•';
+    s.style.left = Math.random() * 100 + '%'; s.style.top = Math.random() * 100 + '%';
+    s.style.fontSize = 8 + Math.random() * 14 + 'px';
+    s.style.animationDelay = Math.random() * 3 + 's';
+    box.appendChild(s);
+  }
+})();
+
+newGame();
+</script>
+</body>
+</html>
